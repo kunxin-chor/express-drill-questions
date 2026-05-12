@@ -1,0 +1,194 @@
+:root {
+  --bg: #ffffff;
+  --panel: #f5f6f8;
+  --panel-2: #eceef2;
+  --border: #d9dde3;
+  --fg: #1f2430;
+  --muted: #64707d;
+  --accent: #2563eb;
+  --accent-2: #15803d;
+  --code-bg: #f1f3f5;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: 100vh;
+}
+
+aside {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+aside h1 {
+  font-size: 16px;
+  margin: 0 0 16px;
+  color: var(--accent);
+}
+
+aside ul { list-style: none; padding: 0; margin: 0; }
+aside li { margin-bottom: 4px; }
+aside li button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid transparent;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+aside li button:hover { background: var(--panel-2); }
+aside li button.active {
+  background: #e4ecff;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.tabs button {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  font: inherit;
+  text-transform: capitalize;
+}
+.tabs button:hover { color: var(--fg); }
+.tabs button.active {
+  background: var(--bg);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-bottom-color: var(--bg);
+  margin-bottom: -1px;
+}
+
+.panel {
+  flex: 1;
+  overflow: auto;
+  padding: 24px 32px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.md {
+  max-width: 780px;
+  line-height: 1.65;
+  color: var(--fg);
+}
+.md * { color: inherit; }
+.md h1 { font-size: 22px; margin-top: 0; }
+.md h2 { font-size: 18px; margin-top: 1.8em; }
+.md code {
+  background: var(--code-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  color: #0b3d91;
+}
+.md pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  border-radius: 6px;
+  overflow-x: auto;
+  color: var(--fg);
+}
+.md pre code { color: var(--fg); }
+.md table { border-collapse: collapse; }
+.md th, .md td { border: 1px solid var(--border); padding: 6px 10px; }
+.md th { background: var(--panel); }
+.md pre code { background: transparent; padding: 0; }
+.md ul, .md ol { padding-left: 1.4em; }
+.md a { color: var(--accent); }
+
+/* Sandpack's own root wrapper (class name owned by the library). */
+main > .sp-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  color: var(--fg);
+}
+
+/* Our per-question layout inside SandpackProvider. */
+.qv {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Host wrapping SandpackLayout on the code tab. */
+.sp-host {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.sp-host .sp-layout {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  height: 100%;
+}
+
+.reveal-box {
+  max-width: 780px;
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.reveal-box p { margin-top: 0; color: var(--muted); }
+.reveal-box button {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.solution-pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  font-size: 13px;
+  max-width: 900px;
+  color: var(--fg);
+}
