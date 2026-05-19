@@ -1,76 +1,52 @@
-# Express Practice — Web UI
+# Express Practice
 
-Interactive Express question bank. Students edit `app.js` in a browser-based
-Monaco editor, click **Run tests**, and see Jest output. The Express app under
-test runs in-process via `supertest` — no listening server, no port management.
+Interactive question bank for learning Express. Students edit `app.js` in a
+browser-based Monaco editor and click **Run tests** to execute Jest +
+`supertest` against their code on the server.
 
-## Run
+The server is **stateless** w.r.t. student code: edits live only in the
+browser's `localStorage`. See [`requirements.md`](./requirements.md) for the
+design contract.
 
-There are two modes. Pick one.
-
-### Dev mode (live reload, two ports)
-
-Best when authoring questions or hacking on the UI.
+## Quick start
 
 ```bash
-cd webapp
-npm install                 # also installs client deps via postinstall
-npm run dev                 # server on 5174, Vite client on 5173
+npm install      # installs server + client deps
+npm run build    # builds the client into client/dist
+npm start        # serves API + client on http://localhost:5174
 ```
 
-Open http://localhost:5173.
-
-### Single-port mode (recommended for Codespaces / hosting)
-
-The server serves the built client *and* the API on one port. Students only
-need one forwarded URL.
+For live editing of the UI:
 
 ```bash
-cd webapp
-npm install                 # also installs client deps
-npm run build               # builds client into client/dist
-npm start                   # serves everything on 5174
+npm run dev      # server on 5174, Vite on 5173 (proxies /api)
 ```
 
-Open http://localhost:5174.
+## Codespaces
 
-### Codespaces
-
-1. Open the repo in a Codespace.
-2. Run the single-port commands above.
-3. Make port **5174** public from the Ports panel and share the URL.
-
-No client-side code changes needed — the client fetches `/api/...` from its
-own origin, which is the same Express server.
+1. Fork → open in a Codespace.
+2. `npm install && npm run build && npm start`.
+3. The Ports panel auto-forwards 5174. Open the forwarded URL.
 
 ## Layout
 
 ```
 webapp/
-  server.js                 # Express API
-  package.json              # server + jest + supertest
+  server.js               stateless Express API + static client
   questions/
-    01-hello/
+    01-hello-world/
       prompt.md
       walkthrough.md
-      starter.js            # initial code (read-only reference)
-      solution.js           # reference solution
-      app.test.js           # supertest assertions
-      app.js                # student's working copy (auto-created, gitignored)
-    02-greet-query/
-      ...
-  client/                   # Vite + React + Monaco
+      starter.js
+      solution.js
+      app.test.js
+    02-hello-route-param/
+    03-hello-query-string/
+  client/                 Vite + React + Monaco
+  .runs/                  ephemeral test workspaces (gitignored)
 ```
 
-## API
+## Add a question
 
-- `GET  /api/questions`            list of `{id,title}`
-- `GET  /api/questions/:id`        full content (prompt, walkthrough, solution, app code, test code)
-- `PUT  /api/questions/:id/app`    save edited `app.js` (`{code}`)
-- `POST /api/questions/:id/run`    spawn `jest` for that question; returns stdout/stderr/exitCode
-- `POST /api/questions/:id/reset`  copy starter over current `app.js`
-
-## Add a new question
-
-Copy any `questions/NN-slug/` folder, edit the five files, and it appears in
-the sidebar automatically (questions are auto-discovered).
+Copy any `questions/NN-slug/` folder, edit the five files. It appears in the
+sidebar on next page load. No registry to edit.

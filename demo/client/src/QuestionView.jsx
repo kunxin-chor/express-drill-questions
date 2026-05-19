@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import Editor from '@monaco-editor/react';
 import { api } from './api.js';
-import { storage } from './storage.js';
-import TryConsole from './TryConsole.jsx';
 
-const TABS = ['problem', 'code', 'try', 'solution', 'walkthrough'];
+const TABS = ['problem', 'code', 'solution', 'walkthrough'];
 
-export default function QuestionView({ id, onResult }) {
+export default function QuestionView({ id }) {
   const [tab, setTab] = useState('problem');
   const [data, setData] = useState(null);
   const [code, setCode] = useState('');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const saveTimer = useRef(null);
 
@@ -22,12 +20,10 @@ export default function QuestionView({ id, onResult }) {
     setData(null);
     setResult(null);
     setRevealed(false);
-    setTab('problem');
     api.get(id).then((d) => {
       if (cancelled) return;
       setData(d);
-      const saved = storage.loadCode(id);
-      setCode(saved != null ? saved : d.starter);
+      setCode(d.appCode);
     });
     return () => {
       cancelled = true;
@@ -37,21 +33,21 @@ export default function QuestionView({ id, onResult }) {
   function onCodeChange(value) {
     const next = value ?? '';
     setCode(next);
+    // Debounced autosave.
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      storage.saveCode(id, next);
-    }, 250);
+      setSaving(true);
+      api.save(id, next).finally(() => setSaving(false));
+    }, 500);
   }
 
   async function runTests() {
     clearTimeout(saveTimer.current);
-    storage.saveCode(id, code);
     setRunning(true);
     setResult({ status: 'running' });
     try {
       const r = await api.run(id, code);
       setResult({ status: 'done', ...r });
-      onResult?.(!!r.passed);
     } catch (err) {
       setResult({ status: 'error', error: err.message });
     } finally {
@@ -59,10 +55,10 @@ export default function QuestionView({ id, onResult }) {
     }
   }
 
-  function resetCode() {
+  async function resetCode() {
     if (!confirm('Discard your changes and restore the starter code?')) return;
-    storage.clearCode(id);
-    setCode(data.starter);
+    const { appCode } = await api.reset(id);
+    setCode(appCode);
     setResult(null);
   }
 
@@ -85,8 +81,7 @@ export default function QuestionView({ id, onResult }) {
       {tab === 'problem' && (
         <div className="panel">
           <div className="md">
-            <h1>{data.title}</h1>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.prompt}</ReactMarkdown>
+            <ReactMarkdown>{data.prompt}</ReactMarkdown>
           </div>
         </div>
       )}
@@ -94,10 +89,17 @@ export default function QuestionView({ id, onResult }) {
       {tab === 'code' && (
         <div className="code-view">
           <div className="code-toolbar">
-            <span className="filename">{id}/app.js</span>
-            <span className="spacer" style={{ flex: 1 }} />
+            <span className="filename">questions/{id}/app.js</span>
+            <span style={{ color: 'var(--muted)', fontSize: 12 }}>
+              {saving ? 'saving…' : 'saved'}
+            </span>
+            <span className="spacer" />
             <button onClick={resetCode}>Reset to starter</button>
-            <button className="primary" onClick={runTests} disabled={running}>
+            <button
+              className="primary"
+              onClick={runTests}
+              disabled={running}
+            >
               {running ? 'Running…' : 'Run tests'}
             </button>
           </div>
@@ -121,29 +123,17 @@ export default function QuestionView({ id, onResult }) {
         </div>
       )}
 
-      {tab === 'try' && (
-        <div className="panel try-panel">
-          <TryConsole questionId={id} getCode={() => code} />
-        </div>
-      )}
-
       {tab === 'solution' && (
         <div className="panel">
-          {data.solution ? (
-            revealed ? (
-              <pre className="solution-pre">{data.solution}</pre>
-            ) : (
-              <div className="reveal-box">
-                <p>
-                  Try solving the problem first. Click below to reveal a
-                  reference solution.
-                </p>
-                <button onClick={() => setRevealed(true)}>Reveal solution</button>
-              </div>
-            )
+          {revealed ? (
+            <pre className="solution-pre">{data.solution}</pre>
           ) : (
-            <div className="md">
-              <p>No reference solution for this question.</p>
+            <div className="reveal-box">
+              <p>
+                Try solving the problem first. Click below to reveal a
+                reference solution.
+              </p>
+              <button onClick={() => setRevealed(true)}>Reveal solution</button>
             </div>
           )}
         </div>
@@ -152,11 +142,7 @@ export default function QuestionView({ id, onResult }) {
       {tab === 'walkthrough' && (
         <div className="panel">
           <div className="md">
-            {data.walkthrough ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.walkthrough}</ReactMarkdown>
-            ) : (
-              <p>No walkthrough yet for this question.</p>
-            )}
+            <ReactMarkdown>{data.walkthrough}</ReactMarkdown>
           </div>
         </div>
       )}
@@ -197,12 +183,12 @@ function TestOutput({ result }) {
       </div>
     );
   }
-  const { passed, exitCode, timedOut, durationMs, stdout, stderr } = result;
+  const { passed, exitCode, durationMs, stdout, stderr } = result;
   return (
     <div className="test-output">
       <div className="out-header">
         <span className={`badge ${passed ? 'pass' : 'fail'}`}>
-          {passed ? 'PASS' : timedOut ? 'TIMEOUT' : 'FAIL'}
+          {passed ? 'PASS' : 'FAIL'}
         </span>
         <span>exit {exitCode}</span>
         <span>{durationMs} ms</span>

@@ -3,45 +3,88 @@ import { api } from './api.js';
 import QuestionView from './QuestionView.jsx';
 
 export default function App() {
-  const [questions, setQuestions] = useState([]);
+  const [tree, setTree] = useState(null);
   const [activeId, setActiveId] = useState(null);
+  const [solved, setSolved] = useState(() => readSolved());
   const [error, setError] = useState(null);
 
   useEffect(() => {
     api
       .list()
-      .then((list) => {
-        setQuestions(list);
-        if (list.length) setActiveId(list[0].id);
+      .then((data) => {
+        setTree(data);
+        const first = data.categories?.[0]?.questions?.[0]?.id;
+        if (first) setActiveId(first);
       })
       .catch((e) => setError(e.message));
   }, []);
+
+  function markSolved(id, passed) {
+    setSolved((prev) => {
+      const next = { ...prev };
+      if (passed) next[id] = true;
+      // Don't unset on failure — we only track "ever passed".
+      writeSolved(next);
+      return next;
+    });
+  }
 
   return (
     <div className="app">
       <aside>
         <h1>Express Practice</h1>
-        {error && <div style={{ color: 'var(--danger)' }}>{error}</div>}
-        <ul>
-          {questions.map((q) => (
-            <li key={q.id}>
-              <button
-                className={q.id === activeId ? 'active' : ''}
-                onClick={() => setActiveId(q.id)}
-              >
-                {q.title}
-              </button>
-            </li>
-          ))}
-        </ul>
+        {error && <div className="err">{error}</div>}
+        {tree?.categories.map((cat) => (
+          <div className="cat" key={cat.slug}>
+            <div className="cat-title">{cat.title}</div>
+            <ul>
+              {cat.questions.map((q) => (
+                <li key={q.id}>
+                  <button
+                    className={[
+                      q.id === activeId ? 'active' : '',
+                      solved[q.id] ? 'solved' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    onClick={() => setActiveId(q.id)}
+                  >
+                    <span>{q.title}</span>
+                    <span className="spacer" style={{ flex: 1 }} />
+                    <span className="status">
+                      {solved[q.id] ? '✓' : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </aside>
       <main>
         {activeId ? (
-          <QuestionView key={activeId} id={activeId} />
+          <QuestionView
+            key={activeId}
+            id={activeId}
+            onResult={(passed) => markSolved(activeId, passed)}
+          />
         ) : (
           <div className="loading">Loading…</div>
         )}
       </main>
     </div>
   );
+}
+
+function readSolved() {
+  try {
+    return JSON.parse(localStorage.getItem('expr-practice:solved') || '{}');
+  } catch {
+    return {};
+  }
+}
+function writeSolved(obj) {
+  try {
+    localStorage.setItem('expr-practice:solved', JSON.stringify(obj));
+  } catch {}
 }
