@@ -1,0 +1,22 @@
+# Render blueprint — see https://render.com/docs/blueprint-spec
+#
+# Deploy this directory by pointing Render at the repo and setting the
+# "root directory" of the service to `webapp/`.
+#
+# Or use a Blueprint: in the Render dashboard, "New +" -> "Blueprint" and
+# point it at this file's repo + branch.
+
+services:
+  - type: web
+    name: express-practice
+    runtime: node
+    plan: free                # bump to "starter" if you outgrow it
+    rootDir: webapp           # remove this line if you deploy webapp/ as the repo root
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node server.js
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"        # keep client devDeps available across rebuilds

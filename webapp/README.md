@@ -22,6 +22,56 @@ For live editing of the UI:
 npm run dev      # server on 5174, Vite on 5173 (proxies /api)
 ```
 
+## Deploy to Render
+
+A [`render.yaml`](./render.yaml) blueprint is included.
+
+**Option A — Blueprint (recommended).**
+
+1. Push this repo to GitHub.
+2. In the Render dashboard: **New +** → **Blueprint**, pick the repo.
+3. Render reads `webapp/render.yaml` and provisions a Web Service.
+
+**Option B — Manual web service.**
+
+In the Render dashboard, **New +** → **Web Service**, then:
+
+| Field | Value |
+| --- | --- |
+| Root Directory | `webapp` |
+| Build Command | `npm install --include=dev && npm run build` |
+| Start Command | `node server.js` |
+| Environment | Node |
+| Node version | 20 (set `NODE_VERSION=20`) |
+| Env var | `NPM_CONFIG_PRODUCTION=false` |
+
+### Why those settings
+
+- **`--include=dev`** + **`NPM_CONFIG_PRODUCTION=false`** — Render sets
+  `NODE_ENV=production` by default, which makes npm skip devDependencies.
+  The client uses `vite` (devDep) for its production build, so dev deps
+  must be installed during the build phase.
+- **Start command is `node server.js`**, not `npm start`. The build
+  already ran `build:questions`, so there's no need to regenerate
+  `questions.generated.json` at boot. (Free-tier dynos sleep when idle;
+  fewer boot steps = faster cold starts.)
+- **`PORT` is read from env automatically** (see `server.js`), so no port
+  configuration is needed.
+
+### Things to know
+
+- Free tier sleeps after ~15 minutes of inactivity; first request after
+  sleep takes ~30 s. Fine for a question bank, painful for live class
+  demos — bump to a paid plan if that matters.
+- Each test/try run spawns a child Node process. Free tier has 512 MB and
+  0.1 CPU, which handles the 3 starter questions but will struggle if you
+  add heavy questions or many concurrent students. Move to **Starter**
+  plan for shared classroom use.
+- The `.runs/` temp dir is on the container's ephemeral disk — perfect,
+  since runs are short-lived and we delete them after each request.
+- Persistence is **localStorage in the student's browser**, so a single
+  hosted instance is safe to share across students.
+
 ## Codespaces
 
 1. Fork → open in a Codespace.

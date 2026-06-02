@@ -1,7 +1,16 @@
 async function j(res) {
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}: ${txt}`);
+    let detail = txt;
+    try {
+      const parsed = JSON.parse(txt);
+      if (parsed?.error) detail = parsed.error;
+    } catch {}
+    throw new Error(
+      res.status === 429
+        ? `Rate limit: ${detail}`
+        : `${res.status} ${res.statusText}: ${detail}`,
+    );
   }
   return res.json();
 }

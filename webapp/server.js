@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -16,8 +17,26 @@ const MAX_OUTPUT_BYTES = 256 * 1024;
 fs.mkdirSync(RUNS_DIR, { recursive: true });
 
 const app = express();
+// Trust the first proxy hop so X-Forwarded-For is honored on Render,
+// Codespaces, etc. Required for rate-limit by IP.
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json({ limit: '512kb' }));
+
+/* ------------------------------ rate limit ------------------------------ */
+
+// Per-IP cap on the spawn-heavy endpoints (Run and Try). Each call forks a
+// Node child process, so unrestricted use can wedge the box. Defaults give
+// a real user plenty of headroom while throttling runaway loops.
+const spawnLimiter = rateLimit({
+  windowMs: 60_000,
+  max: Number(process.env.RATE_LIMIT_PER_MIN || 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'rate limit exceeded — please wait a moment before retrying',
+  },
+});
 
 /* ---------------------------- question store ---------------------------- */
 
@@ -171,7 +190,7 @@ app.post('/api/questions/:id/run', (req, res) => {
   });
 });
 
-app.post('/api/questions/:id/request', (req, res) => {
+app.post('/api/questions/:id/request', spawnLimiter, (req, res) => {
   ensureFresh();
   const q = cache.byId.get(req.params.id);
   if (!q) return res.status(404).json({ error: 'unknown question' });
