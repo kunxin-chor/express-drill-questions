@@ -6,7 +6,8 @@ import { api } from './api.js';
 import { storage } from './storage.js';
 import TryConsole from './TryConsole.jsx';
 
-const TABS = ['problem', 'code', 'try', 'solution', 'walkthrough'];
+const TABS = ['problem', 'try', 'solution', 'walkthrough'];
+const PANEL_KEY = 'expr-practice:panelOpen';
 
 export default function QuestionView({ id, onResult }) {
   const [tab, setTab] = useState('problem');
@@ -15,7 +16,24 @@ export default function QuestionView({ id, onResult }) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [revealed, setRevealed] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(() => {
+    try {
+      return localStorage.getItem(PANEL_KEY) !== 'false';
+    } catch {
+      return true;
+    }
+  });
   const saveTimer = useRef(null);
+
+  function togglePanel() {
+    setPanelOpen((open) => {
+      const next = !open;
+      try {
+        localStorage.setItem(PANEL_KEY, String(next));
+      } catch {}
+      return next;
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -69,98 +87,107 @@ export default function QuestionView({ id, onResult }) {
   if (!data) return <div className="loading">Loading…</div>;
 
   return (
-    <>
-      <nav className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            className={tab === t ? 'active' : ''}
-            onClick={() => setTab(t)}
-          >
-            {t}
+    <div className={`workspace ${panelOpen ? '' : 'panel-collapsed'}`}>
+      <section className="code-pane">
+        <div className="code-toolbar">
+          <span className="filename">{id}/app.js</span>
+          <span className="spacer" style={{ flex: 1 }} />
+          <button onClick={resetCode}>Reset to starter</button>
+          <button className="primary" onClick={runTests} disabled={running}>
+            {running ? 'Running…' : 'Run tests'}
           </button>
-        ))}
-      </nav>
-
-      {tab === 'problem' && (
-        <div className="panel">
-          <div className="md">
-            <h1>{data.title}</h1>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.prompt}</ReactMarkdown>
-          </div>
+          <button
+            className="toggle-panel"
+            onClick={togglePanel}
+            title={panelOpen ? 'Expand editor (hide panel)' : 'Restore panel'}
+          >
+            {panelOpen ? '⟩⟩' : '⟨⟨'}
+          </button>
         </div>
-      )}
-
-      {tab === 'code' && (
-        <div className="code-view">
-          <div className="code-toolbar">
-            <span className="filename">{id}/app.js</span>
-            <span className="spacer" style={{ flex: 1 }} />
-            <button onClick={resetCode}>Reset to starter</button>
-            <button className="primary" onClick={runTests} disabled={running}>
-              {running ? 'Running…' : 'Run tests'}
-            </button>
-          </div>
-          <div className="editor-wrap">
-            <Editor
-              height="100%"
-              language="javascript"
-              value={code}
-              onChange={onCodeChange}
-              theme="vs"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 13,
-                tabSize: 2,
-                automaticLayout: true,
-                scrollBeyondLastLine: false,
-              }}
-            />
-          </div>
-          <TestOutput result={result} />
+        <div className="editor-wrap">
+          <Editor
+            height="100%"
+            language="javascript"
+            value={code}
+            onChange={onCodeChange}
+            theme="vs"
+            options={{
+              minimap: { enabled: false },
+              fontSize: 13,
+              tabSize: 2,
+              automaticLayout: true,
+              scrollBeyondLastLine: false,
+            }}
+          />
         </div>
-      )}
+        <TestOutput result={result} />
+      </section>
 
-      {tab === 'try' && (
-        <div className="panel try-panel">
-          <TryConsole questionId={id} getCode={() => code} />
-        </div>
-      )}
+      {panelOpen && (
+        <section className="info-pane">
+          <nav className="tabs">
+            {TABS.map((t) => (
+              <button
+                key={t}
+                className={tab === t ? 'active' : ''}
+                onClick={() => setTab(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </nav>
 
-      {tab === 'solution' && (
-        <div className="panel">
-          {data.solution ? (
-            revealed ? (
-              <pre className="solution-pre">{data.solution}</pre>
-            ) : (
-              <div className="reveal-box">
-                <p>
-                  Try solving the problem first. Click below to reveal a
-                  reference solution.
-                </p>
-                <button onClick={() => setRevealed(true)}>Reveal solution</button>
+          {tab === 'problem' && (
+            <div className="panel">
+              <div className="md">
+                <h1>{data.title}</h1>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.prompt}</ReactMarkdown>
               </div>
-            )
-          ) : (
-            <div className="md">
-              <p>No reference solution for this question.</p>
             </div>
           )}
-        </div>
-      )}
 
-      {tab === 'walkthrough' && (
-        <div className="panel">
-          <div className="md">
-            {data.walkthrough ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.walkthrough}</ReactMarkdown>
-            ) : (
-              <p>No walkthrough yet for this question.</p>
-            )}
-          </div>
-        </div>
+          {tab === 'try' && (
+            <div className="panel try-panel">
+              <TryConsole questionId={id} getCode={() => code} />
+            </div>
+          )}
+
+          {tab === 'solution' && (
+            <div className="panel">
+              {data.solution ? (
+                revealed ? (
+                  <pre className="solution-pre">{data.solution}</pre>
+                ) : (
+                  <div className="reveal-box">
+                    <p>
+                      Try solving the problem first. Click below to reveal a
+                      reference solution.
+                    </p>
+                    <button onClick={() => setRevealed(true)}>Reveal solution</button>
+                  </div>
+                )
+              ) : (
+                <div className="md">
+                  <p>No reference solution for this question.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === 'walkthrough' && (
+            <div className="panel">
+              <div className="md">
+                {data.walkthrough ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{data.walkthrough}</ReactMarkdown>
+                ) : (
+                  <p>No walkthrough yet for this question.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
       )}
-    </>
+    </div>
   );
 }
 

@@ -146,6 +146,36 @@ main {
 .md th { background: var(--panel); }
 .md a { color: var(--accent); }
 
+.workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+.code-pane {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+}
+.workspace.panel-collapsed .code-pane { border-right: none; }
+.info-pane {
+  flex: 0 0 46%;
+  max-width: 60%;
+  min-width: 340px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.toggle-panel {
+  font-family: var(--mono);
+  font-weight: 700;
+  min-width: 40px;
+}
+
 .code-view {
   flex: 1;
   display: grid;
