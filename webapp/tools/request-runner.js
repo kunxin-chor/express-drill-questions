@@ -82,6 +82,7 @@ const request = require('supertest');
       ok: res.status >= 200 && res.status < 400,
     };
     process.stdout.write(JSON.stringify(out));
+    process.exit(0);
   } catch (err) {
     process.stdout.write(
       JSON.stringify({ error: err.message, stack: err.stack, where: 'request' }),

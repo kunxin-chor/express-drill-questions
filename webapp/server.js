@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
 const ROOT = __dirname;
 const QUESTIONS_JSON = path.join(ROOT, 'questions.generated.json');
@@ -15,6 +16,16 @@ const MAX_CODE_BYTES = 256 * 1024;
 const MAX_OUTPUT_BYTES = 256 * 1024;
 
 fs.mkdirSync(RUNS_DIR, { recursive: true });
+
+let baseMongoUri = '';
+
+function getDbName(type, questionId, sessionId) {
+  if (type === 'test') {
+    return `test_${questionId}_${crypto.randomBytes(6).toString('hex')}`;
+  }
+  const sess = sessionId ? sessionId.slice(0, 12) : 'anon';
+  return `try_${questionId}_${sess}`;
+}
 
 const app = express();
 // Trust the first proxy hop so X-Forwarded-For is honored on Render,
@@ -120,6 +131,10 @@ app.post('/api/questions/:id/run', (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 
+  const sessionId = req.headers['x-session-id'] || '';
+  const testDb = getDbName('test', req.params.id, sessionId);
+  const mongoUri = baseMongoUri + testDb;
+
   const jestBin = path.join(ROOT, 'node_modules', 'jest', 'bin', 'jest.js');
   const child = spawn(
     process.execPath,
@@ -128,12 +143,13 @@ app.post('/api/questions/:id/run', (req, res) => {
       '--colors=false',
       '--no-coverage',
       '--testEnvironment=node',
+      '--forceExit',
       '--rootDir',
       ROOT,
       '--runTestsByPath',
       path.join(runDir, 'app.test.js'),
     ],
-    { cwd: runDir, env: { ...process.env, CI: 'true', FORCE_COLOR: '0' } },
+    { cwd: runDir, env: { ...process.env, CI: 'true', FORCE_COLOR: '0', MONGODB_URI: mongoUri } },
   );
 
   let stdout = '';
@@ -190,7 +206,7 @@ app.post('/api/questions/:id/run', (req, res) => {
   });
 });
 
-app.post('/api/questions/:id/request', spawnLimiter, (req, res) => {
+app.post('/api/questions/:id/request', spawnLimiter, async (req, res) => {
   ensureFresh();
   const q = cache.byId.get(req.params.id);
   if (!q) return res.status(404).json({ error: 'unknown question' });
@@ -216,12 +232,28 @@ app.post('/api/questions/:id/request', spawnLimiter, (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 
+  const sessionId = req.headers['x-session-id'] || '';
+  const tryDb = getDbName('try', req.params.id, sessionId);
+  const mongoUri = baseMongoUri + tryDb;
+  const env = { ...process.env, NODE_ENV: 'development', MONGODB_URI: mongoUri };
+
+  // Run seed script first if the question defines one.
+  if (q.seedCode) {
+    try {
+      fs.writeFileSync(path.join(runDir, 'seed.js'), q.seedCode, 'utf8');
+      await runSeed(runDir, env);
+    } catch (err) {
+      cleanup(runDir);
+      return res.status(500).json({ error: `seed failed: ${err.message}` });
+    }
+  }
+
   const driver = path.join(ROOT, 'tools', 'request-runner.js');
   const spec = JSON.stringify({ method, path: urlPath, headers, body });
 
   const child = spawn(process.execPath, [driver, spec], {
     cwd: runDir,
-    env: { ...process.env, NODE_ENV: 'development' },
+    env,
   });
 
   let stdout = '';
@@ -300,6 +332,19 @@ app.post('/api/questions/:id/request', spawnLimiter, (req, res) => {
   });
 });
 
+function runSeed(cwd, env) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['seed.js'], { cwd, env });
+    let stderr = '';
+    child.stderr.on('data', (b) => (stderr += b.toString()));
+    child.once('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(stderr || `seed exited with code ${code}`));
+    });
+    child.once('error', (err) => reject(err));
+  });
+}
+
 function cleanup(dir) {
   try {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -336,6 +381,17 @@ npm start</pre>
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`[server] http://localhost:${PORT}`);
+async function startServer() {
+  const mongod = await MongoMemoryServer.create();
+  baseMongoUri = mongod.getUri();
+  console.log(`[server] MongoMemoryServer ready at ${baseMongoUri}`);
+
+  app.listen(PORT, () => {
+    console.log(`[server] http://localhost:${PORT}`);
+  });
+}
+
+startServer().catch((err) => {
+  console.error('[server] failed to start:', err);
+  process.exit(1);
 });

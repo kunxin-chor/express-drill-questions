@@ -1,0 +1,185 @@
+# Problem
+
+Find a single document by its `_id`.
+
+The test runner has already started an in-memory MongoDB instance and made it
+available through `process.env.MONGODB_URI`.
+
+Using the **native MongoDB driver** (`mongodb`), register a `GET /users/:id`
+route that:
+
+1. Converts the `id` route parameter to a MongoDB `ObjectId`.
+2. Finds **one document** in the `users` collection whose `_id` matches.
+3. Returns the user as **JSON** via `res.json`.
+4. If no user is found, responds with status **404**.
+
+The starter code sets up the database connection for you. You only need to
+write the route handler.
+
+## Hints
+
+- Import `ObjectId` from `mongodb`: `const { ObjectId } = require('mongodb');`
+- Create an ObjectId with `new ObjectId(string)`.
+- `db.collection('users').findOne({ _id: ... })` returns the matching document
+  or `null`.
+- Use an `if` statement to check the result and send either `res.json(user)`
+  or `res.status(404).send(...)`.
+
+# Starter
+
+```js
+const express = require('express');
+const { MongoClient, ObjectId } = require('mongodb');
+
+const app = express();
+const client = new MongoClient(process.env.MONGODB_URI);
+const db = client.db();
+
+app.get('/users/:id', async (req, res) => {
+  // TODO: find the user by _id and return it as JSON.
+  // If the user is not found, respond with 404.
+});
+
+module.exports = app;
+```
+
+# Solution
+
+```js
+const express = require('express');
+const { MongoClient, ObjectId } = require('mongodb');
+
+const app = express();
+const client = new MongoClient(process.env.MONGODB_URI);
+const db = client.db();
+
+app.get('/users/:id', async (req, res) => {
+  const user = await db.collection('users').findOne({
+    _id: new ObjectId(req.params.id),
+  });
+
+  if (!user) {
+    return res.status(404).send('User not found');
+  }
+
+  res.json(user);
+});
+
+module.exports = app;
+```
+
+# Tests
+
+```js
+const request = require('supertest');
+const { MongoClient, ObjectId } = require('mongodb');
+const app = require('./app');
+
+describe('GET /users/:id', () => {
+  let client;
+  let userId;
+
+  beforeAll(async () => {
+    client = new MongoClient(process.env.MONGODB_URI);
+    await client.connect();
+    const db = client.db();
+    await db.collection('users').deleteMany({});
+    const result = await db.collection('users').insertOne({ name: 'Ada', age: 28 });
+    userId = result.insertedId.toString();
+  });
+
+  afterAll(async () => {
+    await client.db().dropDatabase();
+    await client.close();
+  });
+
+  test('responds with status 200 for an existing user', async () => {
+    const res = await request(app).get(`/users/${userId}`);
+    expect(res.status).toBe(200);
+  });
+
+  test('returns the correct user as JSON', async () => {
+    const res = await request(app).get(`/users/${userId}`);
+    expect(res.body).toMatchObject({ name: 'Ada', age: 28 });
+    expect(res.body._id).toBe(userId);
+  });
+
+  test('responds with 404 for a non-existent user', async () => {
+    const fakeId = new ObjectId().toString();
+    const res = await request(app).get(`/users/${fakeId}`);
+    expect(res.status).toBe(404);
+  });
+});
+```
+
+# Seed
+
+```js
+const { MongoClient } = require('mongodb');
+
+async function seed() {
+  const client = new MongoClient(process.env.MONGODB_URI);
+  await client.connect();
+  const db = client.db();
+  await db.collection('users').deleteMany({});
+  await db.collection('users').insertMany([
+    { name: 'Ada', age: 28 },
+    { name: 'Bob', age: 32 },
+    { name: 'Charlie', age: 25 },
+  ]);
+  await client.close();
+}
+
+seed().catch((err) => {
+  console.error('Seed failed:', err);
+  process.exit(1);
+});
+```
+
+# Walkthrough
+
+## Finding a document by `_id`
+
+MongoDB stores `_id` fields as `ObjectId` values, not plain strings. To look
+up a document by its `_id`, you must convert the string parameter into an
+`ObjectId` instance:
+
+```js
+const { ObjectId } = require('mongodb');
+
+const user = await db.collection('users').findOne({
+  _id: new ObjectId(req.params.id),
+});
+```
+
+- `new ObjectId(string)` parses the 24-character hex string into BSON
+  ObjectId form.
+- `findOne(filter)` returns the first matching document, or `null` if none
+  matches.
+
+## Handling "not found"
+
+Always check the result of `findOne` before sending it:
+
+```js
+if (!user) {
+  return res.status(404).send('User not found');
+}
+res.json(user);
+```
+
+If you skip this check, the client receives `null` as JSON with a 200 status —
+which looks like a successful response for a missing resource.
+
+## Returning JSON
+
+`res.json(user)` serializes the document and sets `Content-Type: application/json`.
+
+## Common mistakes
+
+- Passing the raw string `req.params.id` directly to the query — MongoDB will
+  not match because the stored `_id` is an ObjectId.
+- Forgetting `new` before `ObjectId(...)` — without `new` the driver may throw
+  or behave unexpectedly depending on the version.
+- Forgetting `return` inside the `if (!user)` block — the handler continues to
+  `res.json(user)` after already sending the 404, causing an Express error.

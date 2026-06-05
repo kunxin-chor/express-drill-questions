@@ -20,8 +20,9 @@ const KNOWN_SECTIONS = new Set([
   'Solution',
   'Tests',
   'Walkthrough',
+  'Seed',
 ]);
-const CODE_SECTIONS = new Set(['Starter', 'Solution', 'Tests']);
+const CODE_SECTIONS = new Set(['Starter', 'Solution', 'Tests', 'Seed']);
 
 /* --------------------------------- utils -------------------------------- */
 
@@ -177,6 +178,9 @@ function parseQuestionFile(absPath, categorySlug) {
       ? extractSingleCodeBlock('Solution', sections.Solution)
       : '',
     walkthrough: sections.Walkthrough || '',
+    seedCode: sections.Seed
+      ? extractSingleCodeBlock('Seed', sections.Seed)
+      : '',
   };
   return question;
 }

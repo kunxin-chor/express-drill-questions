@@ -1,3 +1,28 @@
+const SESSION_KEY = 'expr-practice:session';
+
+function getSessionId() {
+  let id;
+  try {
+    id = localStorage.getItem(SESSION_KEY);
+    if (!id) {
+      id = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(SESSION_KEY, id);
+    }
+  } catch {
+    id = 'anonymous';
+  }
+  return id;
+}
+
+function headers() {
+  return {
+    'Content-Type': 'application/json',
+    'X-Session-Id': getSessionId(),
+  };
+}
+
 async function j(res) {
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
@@ -21,13 +46,13 @@ export const api = {
   run: (id, code) =>
     fetch(`/api/questions/${id}/run`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers(),
       body: JSON.stringify({ code }),
     }).then(j),
   request: (id, code, spec) =>
     fetch(`/api/questions/${id}/request`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers(),
       body: JSON.stringify({ code, ...spec }),
     }).then(j),
 };
