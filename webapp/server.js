@@ -382,7 +382,9 @@ npm start</pre>
 }
 
 async function startServer() {
-  const mongod = await MongoMemoryServer.create();
+  const mongod = await MongoMemoryServer.create({
+    binary: { version: process.env.MONGOMS_VERSION || '7.0.14' },
+  });
   baseMongoUri = mongod.getUri();
   console.log(`[server] MongoMemoryServer ready at ${baseMongoUri}`);
 
