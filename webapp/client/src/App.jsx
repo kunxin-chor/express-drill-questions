@@ -14,10 +14,31 @@ export default function App() {
       .then((data) => {
         setTree(data);
         const first = data.categories?.[0]?.questions?.[0]?.id;
-        if (first) setActiveId(first);
+        // Read the question ID from URL hash, or default to first question
+        const hashId = window.location.hash.slice(1);
+        setActiveId(hashId || first);
       })
       .catch((e) => setError(e.message));
   }, []);
+
+  // Update URL hash when activeId changes
+  useEffect(() => {
+    if (activeId) {
+      window.location.hash = activeId;
+    }
+  }, [activeId]);
+
+  // Listen for hash changes (back/forward navigation)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hashId = window.location.hash.slice(1);
+      if (hashId && hashId !== activeId) {
+        setActiveId(hashId);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [activeId]);
 
   function markSolved(id, passed) {
     setSolved((prev) => {
