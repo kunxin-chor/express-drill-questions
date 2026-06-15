@@ -14,6 +14,21 @@ that:
 The starter code sets up the database connection for you. You only need to
 write the route handler.
 
+## Example data
+
+The `users` collection may contain documents like:
+
+```js
+{ name: 'Ada', age: 28 }
+{ name: 'Bob', age: 32 }
+```
+
+## Try tab
+
+After writing your route, try:
+
+`GET /users`
+
 ## Hints
 
 - `db.collection('users')` gives you a collection handle.
