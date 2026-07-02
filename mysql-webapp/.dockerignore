@@ -4,3 +4,4 @@ client/dist
 .runs
 .mysql-tmp
 questions.generated.json
+Dockerfile

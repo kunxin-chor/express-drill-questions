@@ -15,7 +15,7 @@ const { createDB } = require('mysql-memory-server');
   const version = process.env.MYSQL_VERSION || '8.4.x';
   console.log(`[prefetch-mysql] ensuring MySQL ${version} binary is cached…`);
   const started = Date.now();
-  const db = await createDB({ version, xEnabled: 'OFF' });
+  const db = await createDB({ version, xEnabled: 'OFF', logLevel: 'LOG' });
   console.log(
     `[prefetch-mysql] MySQL booted on port ${db.port} in ${Date.now() - started}ms; stopping.`,
   );

@@ -24,6 +24,14 @@ COPY . .
 # Build questions and the React client
 RUN npm run build
 
+# mysqld refuses to run as root, so run the prefetch (and the app) as the
+# unprivileged "node" user that ships with the base image.
+# Pin TMPDIR inside the image so the downloaded MySQL binary is baked into
+# an image layer and survives cold starts (os.tmpdir() honors TMPDIR).
+ENV TMPDIR=/app/.mysql-tmp
+RUN mkdir -p /app/.mysql-tmp && chown -R node:node /app
+USER node
+
 # Prefetch the MySQL binary so it is baked into the image layers.
 # This avoids the large download on every cold start.
 RUN npm run prefetch:mysql
