@@ -24,16 +24,10 @@ services:
   # binary cache during build so the first cold start is cheaper.
   - type: web
     name: sql-practice
-    runtime: node
+    runtime: docker
     plan: free
     rootDir: mysql-webapp
-    buildCommand: npm install --include=dev && npm run build && npm run prefetch:mysql
-    startCommand: node server.js
     autoDeploy: true
     envVars:
-      - key: NODE_VERSION
-        value: 20
-      - key: NPM_CONFIG_PRODUCTION
-        value: "false"
       - key: MYSQL_VERSION
         value: "8.4.x"
