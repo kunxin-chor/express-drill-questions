@@ -24,33 +24,33 @@ You can use standard JavaScript `if` statements inside your template using `<% .
 
 ## Write it in the editor
 
+In `app.js`:
 ```js
 app.get('/people/highlight', async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM people');
-  
-  const template = `
-    <table border="1">
-      <tr>
-        <th>Name</th>
-        <th>Role</th>
-      </tr>
-      <% people.forEach(p => { %>
-        <tr>
-          <td>
-            <%= p.name %>
-            <% if (p.role === 'admin') { %>
-              ⭐
-            <% } %>
-          </td>
-          <td><%= p.role %></td>
-        </tr>
-      <% }); %>
-    </table>
-  `;
-
-  const html = ejs.render(template, { people: rows });
-  res.send(html);
+  res.render('index', { people: rows });
 });
+```
+
+In `views/index.ejs`:
+```html
+<table border="1">
+  <tr>
+    <th>Name</th>
+    <th>Role</th>
+  </tr>
+  <% people.forEach(p => { %>
+    <tr>
+      <td>
+        <%= p.name %>
+        <% if (p.role === 'admin') { %>
+          ⭐
+        <% } %>
+      </td>
+      <td><%= p.role %></td>
+    </tr>
+  <% }); %>
+</table>
 ```
 
 ## Try it
@@ -64,10 +64,11 @@ You should see stars next to Ada and Linus, but not next to Grace or Maya.
 ```js
 const express = require('express');
 const mysql = require('mysql2/promise');
-const ejs = require('ejs');
 
 const app = express();
 const pool = mysql.createPool(process.env.DATABASE_URL);
+
+app.set('view engine', 'ejs');
 
 app.get('/people/highlight', async (req, res) => {
   // TODO: Render a table where admins get a '⭐' next to their name
@@ -76,44 +77,65 @@ app.get('/people/highlight', async (req, res) => {
 module.exports = app;
 ```
 
+# EJS Starter
+
+```html
+<table border="1">
+  <tr>
+    <th>Name</th>
+    <th>Role</th>
+  </tr>
+  <% people.forEach(p => { %>
+    <tr>
+      <td>
+        <%= p.name %>
+        <!-- TODO: Add a ⭐ if p.role is 'admin' -->
+      </td>
+      <td><%= p.role %></td>
+    </tr>
+  <% }); %>
+</table>
+```
+
 # Solution
 
 ```js
 const express = require('express');
 const mysql = require('mysql2/promise');
-const ejs = require('ejs');
 
 const app = express();
 const pool = mysql.createPool(process.env.DATABASE_URL);
 
+app.set('view engine', 'ejs');
+
 app.get('/people/highlight', async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM people');
-  
-  const template = `
-    <table border="1">
-      <tr>
-        <th>Name</th>
-        <th>Role</th>
-      </tr>
-      <% people.forEach(p => { %>
-        <tr>
-          <td>
-            <%= p.name %>
-            <% if (p.role === 'admin') { %>
-              ⭐
-            <% } %>
-          </td>
-          <td><%= p.role %></td>
-        </tr>
-      <% }); %>
-    </table>
-  `;
-
-  const html = ejs.render(template, { people: rows });
-  res.send(html);
+  res.render('index', { people: rows });
 });
 
 module.exports = app;
+```
+
+# EJS Solution
+
+```html
+<table border="1">
+  <tr>
+    <th>Name</th>
+    <th>Role</th>
+  </tr>
+  <% people.forEach(p => { %>
+    <tr>
+      <td>
+        <%= p.name %>
+        <% if (p.role === 'admin') { %>
+          ⭐
+        <% } %>
+      </td>
+      <td><%= p.role %></td>
+    </tr>
+  <% }); %>
+</table>
 ```
 
 # Tests

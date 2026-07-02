@@ -44,31 +44,30 @@ A table is made of rows (`<tr>`) and cells (`<td>`). We wrap the rows in a loop 
 
 ## Write it in the editor
 
+In `app.js`:
 ```js
 app.get('/people/table', async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM people');
-  
-  const template = `
-    <h1>People Table</h1>
-    <table border="1">
-      <tr>
-        <th>Name</th>
-        <th>Role</th>
-        <th>Age</th>
-      </tr>
-      <% people.forEach(p => { %>
-        <tr>
-          <td><%= p.name %></td>
-          <td><%= p.role %></td>
-          <td><%= p.age %></td>
-        </tr>
-      <% }); %>
-    </table>
-  `;
-
-  const html = ejs.render(template, { people: rows });
-  res.send(html);
+  res.render('index', { people: rows });
 });
+```
+
+In `views/index.ejs`:
+```html
+<table border="1">
+  <tr>
+    <th>Name</th>
+    <th>Role</th>
+    <th>Age</th>
+  </tr>
+  <% people.forEach(p => { %>
+    <tr>
+      <td><%= p.name %></td>
+      <td><%= p.role %></td>
+      <td><%= p.age %></td>
+    </tr>
+  <% }); %>
+</table>
 ```
 
 ## Try it
@@ -82,16 +81,30 @@ You should see a real HTML table populated with data from your MySQL database.
 ```js
 const express = require('express');
 const mysql = require('mysql2/promise');
-const ejs = require('ejs');
 
 const app = express();
 const pool = mysql.createPool(process.env.DATABASE_URL);
 
+app.set('view engine', 'ejs');
+
 app.get('/people/table', async (req, res) => {
-  // TODO: Fetch all people and render them into an HTML table using EJS
+  // TODO: Fetch all people and render the 'index' view
 });
 
 module.exports = app;
+```
+
+# EJS Starter
+
+```html
+<table border="1">
+  <tr>
+    <th>Name</th>
+    <th>Role</th>
+    <th>Age</th>
+  </tr>
+  <!-- TODO: Loop through people and create a <tr> for each -->
+</table>
 ```
 
 # Solution
@@ -99,36 +112,37 @@ module.exports = app;
 ```js
 const express = require('express');
 const mysql = require('mysql2/promise');
-const ejs = require('ejs');
 
 const app = express();
 const pool = mysql.createPool(process.env.DATABASE_URL);
 
+app.set('view engine', 'ejs');
+
 app.get('/people/table', async (req, res) => {
   const [rows] = await pool.query('SELECT * FROM people');
-  
-  const template = `
-    <table border="1">
-      <tr>
-        <th>Name</th>
-        <th>Role</th>
-        <th>Age</th>
-      </tr>
-      <% people.forEach(p => { %>
-        <tr>
-          <td><%= p.name %></td>
-          <td><%= p.role %></td>
-          <td><%= p.age %></td>
-        </tr>
-      <% }); %>
-    </table>
-  `;
-
-  const html = ejs.render(template, { people: rows });
-  res.send(html);
+  res.render('index', { people: rows });
 });
 
 module.exports = app;
+```
+
+# EJS Solution
+
+```html
+<table border="1">
+  <tr>
+    <th>Name</th>
+    <th>Role</th>
+    <th>Age</th>
+  </tr>
+  <% people.forEach(p => { %>
+    <tr>
+      <td><%= p.name %></td>
+      <td><%= p.role %></td>
+      <td><%= p.age %></td>
+    </tr>
+  <% }); %>
+</table>
 ```
 
 # Tests

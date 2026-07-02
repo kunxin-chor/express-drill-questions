@@ -13,6 +13,8 @@ export default function QuestionView({ id, onResult }) {
   const [tab, setTab] = useState('problem');
   const [data, setData] = useState(null);
   const [code, setCode] = useState('');
+  const [ejsCode, setEjsCode] = useState('');
+  const [activeFile, setActiveFile] = useState('app.js');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [revealed, setRevealed] = useState(false);
@@ -46,6 +48,9 @@ export default function QuestionView({ id, onResult }) {
       setData(d);
       const saved = storage.loadCode(id);
       setCode(saved != null ? saved : d.starter);
+      const savedEjs = storage.loadCode(id + ':ejs');
+      setEjsCode(savedEjs != null ? savedEjs : d.ejsStarter || '');
+      setActiveFile('app.js');
     });
     return () => {
       cancelled = true;
@@ -54,20 +59,31 @@ export default function QuestionView({ id, onResult }) {
 
   function onCodeChange(value) {
     const next = value ?? '';
-    setCode(next);
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      storage.saveCode(id, next);
-    }, 250);
+    if (activeFile === 'app.js') {
+      setCode(next);
+      clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        storage.saveCode(id, next);
+      }, 250);
+    } else {
+      setEjsCode(next);
+      clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        storage.saveCode(id + ':ejs', next);
+      }, 250);
+    }
   }
 
   async function runTests() {
     clearTimeout(saveTimer.current);
     storage.saveCode(id, code);
+    if (data.ejsStarter) {
+      storage.saveCode(id + ':ejs', ejsCode);
+    }
     setRunning(true);
     setResult({ status: 'running' });
     try {
-      const r = await api.run(id, code);
+      const r = await api.run(id, code, ejsCode);
       setResult({ status: 'done', ...r });
       onResult?.(!!r.passed);
     } catch (err) {
@@ -80,7 +96,9 @@ export default function QuestionView({ id, onResult }) {
   function resetCode() {
     if (!confirm('Discard your changes and restore the starter code?')) return;
     storage.clearCode(id);
+    storage.clearCode(id + ':ejs');
     setCode(data.starter);
+    setEjsCode(data.ejsStarter || '');
     setResult(null);
   }
 
@@ -90,7 +108,24 @@ export default function QuestionView({ id, onResult }) {
     <div className={`workspace ${panelOpen ? '' : 'panel-collapsed'}`}>
       <section className="code-pane">
         <div className="code-toolbar">
-          <span className="filename">{id}/app.js</span>
+          {data.ejsStarter ? (
+            <div className="file-tabs">
+              <button
+                className={activeFile === 'app.js' ? 'active' : ''}
+                onClick={() => setActiveFile('app.js')}
+              >
+                app.js
+              </button>
+              <button
+                className={activeFile === 'index.ejs' ? 'active' : ''}
+                onClick={() => setActiveFile('index.ejs')}
+              >
+                views/index.ejs
+              </button>
+            </div>
+          ) : (
+            <span className="filename">{id}/app.js</span>
+          )}
           <span className="spacer" style={{ flex: 1 }} />
           <button onClick={resetCode}>Reset to starter</button>
           <button className="primary" onClick={runTests} disabled={running}>
@@ -107,8 +142,8 @@ export default function QuestionView({ id, onResult }) {
         <div className="editor-wrap">
           <Editor
             height="100%"
-            language="javascript"
-            value={code}
+            language={activeFile === 'app.js' ? 'javascript' : 'html'}
+            value={activeFile === 'app.js' ? code : ejsCode}
             onChange={onCodeChange}
             theme="vs"
             options={{
@@ -148,7 +183,11 @@ export default function QuestionView({ id, onResult }) {
 
           {tab === 'try' && (
             <div className="panel try-panel">
-              <TryConsole questionId={id} getCode={() => code} />
+              <TryConsole
+                questionId={id}
+                getCode={() => code}
+                getEjsCode={() => ejsCode}
+              />
             </div>
           )}
 
@@ -156,7 +195,20 @@ export default function QuestionView({ id, onResult }) {
             <div className="panel">
               {data.solution ? (
                 revealed ? (
-                  <pre className="solution-pre">{data.solution}</pre>
+                  <>
+                    <div className="md">
+                      <h3>app.js</h3>
+                    </div>
+                    <pre className="solution-pre">{data.solution}</pre>
+                    {data.ejsSolution && (
+                      <>
+                        <div className="md">
+                          <h3>views/index.ejs</h3>
+                        </div>
+                        <pre className="solution-pre">{data.ejsSolution}</pre>
+                      </>
+                    )}
+                  </>
                 ) : (
                   <div className="reveal-box">
                     <p>

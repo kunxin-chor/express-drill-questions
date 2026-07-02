@@ -43,16 +43,16 @@ async function j(res) {
 export const api = {
   list: () => fetch('/api/questions').then(j),
   get: (id) => fetch(`/api/questions/${id}`).then(j),
-  run: (id, code) =>
+  run: (id, code, ejsCode) =>
     fetch(`/api/questions/${id}/run`, {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, ejsCode }),
     }).then(j),
-  request: (id, code, spec) =>
+  request: (id, code, ejsCode, spec) =>
     fetch(`/api/questions/${id}/request`, {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify({ code, ...spec }),
+      body: JSON.stringify({ code, ejsCode, ...spec }),
     }).then(j),
 };

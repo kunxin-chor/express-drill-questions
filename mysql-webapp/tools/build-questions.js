@@ -17,12 +17,21 @@ const REQUIRED_SECTIONS = ['Problem', 'Starter', 'Tests'];
 const KNOWN_SECTIONS = new Set([
   'Problem',
   'Starter',
+  'EJS Starter',
   'Solution',
+  'EJS Solution',
   'Tests',
   'Walkthrough',
   'Seed',
 ]);
-const CODE_SECTIONS = new Set(['Starter', 'Solution', 'Tests', 'Seed']);
+const CODE_SECTIONS = new Set([
+  'Starter',
+  'EJS Starter',
+  'Solution',
+  'EJS Solution',
+  'Tests',
+  'Seed',
+]);
 
 /* --------------------------------- utils -------------------------------- */
 
@@ -112,22 +121,22 @@ function splitH1Sections(md) {
 }
 
 /**
- * Extract the contents of a single fenced ```js (or javascript) block from
- * a section's markdown. Returns the raw code string.
+ * Extract the contents of a single fenced code block from a section's markdown.
+ * Supports any language (js, html, etc.).
  */
 function extractSingleCodeBlock(sectionName, md) {
-  const re = /```(?:js|javascript)\s*\n([\s\S]*?)\n```/g;
+  const re = /```[a-z]*\s*\n([\s\S]*?)\n```/g;
   const matches = [];
   let m;
   while ((m = re.exec(md)) !== null) matches.push(m[1]);
   if (matches.length === 0) {
     throw new Error(
-      `section "${sectionName}" must contain one \`\`\`js code block`,
+      `section "${sectionName}" must contain one code block`,
     );
   }
   if (matches.length > 1) {
     throw new Error(
-      `section "${sectionName}" must contain exactly one \`\`\`js block, found ${matches.length}`,
+      `section "${sectionName}" must contain exactly one code block, found ${matches.length}`,
     );
   }
   return matches[0];
@@ -173,9 +182,15 @@ function parseQuestionFile(absPath, categorySlug) {
     order,
     prompt: sections.Problem,
     starter: extractSingleCodeBlock('Starter', sections.Starter),
+    ejsStarter: sections['EJS Starter']
+      ? extractSingleCodeBlock('EJS Starter', sections['EJS Starter'])
+      : '',
     testCode: extractSingleCodeBlock('Tests', sections.Tests),
     solution: sections.Solution
       ? extractSingleCodeBlock('Solution', sections.Solution)
+      : '',
+    ejsSolution: sections['EJS Solution']
+      ? extractSingleCodeBlock('EJS Solution', sections['EJS Solution'])
       : '',
     walkthrough: sections.Walkthrough || '',
     seedCode: sections.Seed

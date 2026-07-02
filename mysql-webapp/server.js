@@ -143,7 +143,8 @@ app.post('/api/questions/:id/run', async (req, res) => {
   if (!q) return res.status(404).json({ error: 'unknown question' });
 
   const code = typeof req.body?.code === 'string' ? req.body.code : '';
-  if (Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES) {
+  const ejsCode = typeof req.body?.ejsCode === 'string' ? req.body.ejsCode : '';
+  if (Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES || Buffer.byteLength(ejsCode, 'utf8') > MAX_CODE_BYTES) {
     return res.status(413).json({ error: 'code too large' });
   }
   if (!q.testCode) {
@@ -155,6 +156,10 @@ app.post('/api/questions/:id/run', async (req, res) => {
     runDir = path.join(RUNS_DIR, crypto.randomBytes(8).toString('hex'));
     fs.mkdirSync(runDir, { recursive: true });
     fs.writeFileSync(path.join(runDir, 'app.js'), code, 'utf8');
+    if (ejsCode) {
+      fs.mkdirSync(path.join(runDir, 'views'), { recursive: true });
+      fs.writeFileSync(path.join(runDir, 'views', 'index.ejs'), ejsCode, 'utf8');
+    }
     fs.writeFileSync(path.join(runDir, 'app.test.js'), q.testCode, 'utf8');
   } catch (err) {
     if (runDir) cleanup(runDir);
@@ -248,11 +253,11 @@ app.post('/api/questions/:id/request', spawnLimiter, async (req, res) => {
   const q = cache.byId.get(req.params.id);
   if (!q) return res.status(404).json({ error: 'unknown question' });
 
-  const { code, method, path: urlPath, headers, body } = req.body || {};
+  const { code, ejsCode, method, path: urlPath, headers, body } = req.body || {};
   if (typeof code !== 'string') {
     return res.status(400).json({ error: 'code required' });
   }
-  if (Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES) {
+  if (Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES || (ejsCode && Buffer.byteLength(ejsCode, 'utf8') > MAX_CODE_BYTES)) {
     return res.status(413).json({ error: 'code too large' });
   }
   if (typeof method !== 'string' || typeof urlPath !== 'string') {
@@ -264,6 +269,10 @@ app.post('/api/questions/:id/request', spawnLimiter, async (req, res) => {
     runDir = path.join(RUNS_DIR, crypto.randomBytes(8).toString('hex'));
     fs.mkdirSync(runDir, { recursive: true });
     fs.writeFileSync(path.join(runDir, 'app.js'), code, 'utf8');
+    if (ejsCode) {
+      fs.mkdirSync(path.join(runDir, 'views'), { recursive: true });
+      fs.writeFileSync(path.join(runDir, 'views', 'index.ejs'), ejsCode, 'utf8');
+    }
   } catch (err) {
     if (runDir) cleanup(runDir);
     return res.status(500).json({ error: err.message });

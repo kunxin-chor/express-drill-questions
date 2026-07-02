@@ -27,73 +27,87 @@ Example EJS template:
 
 ## Write it in the editor
 
-In this environment, we define the template as a string inside our code.
+You now have two tabs in your code editor: `app.js` and `views/index.ejs`.
 
+In `app.js`:
 ```js
-const ejs = require('ejs');
+const express = require('express');
+const app = express();
+
+app.set('view engine', 'ejs');
 
 app.get('/names', (req, res) => {
   const names = ['Ada', 'Grace', 'Linus', 'Maya'];
-  
-  const template = `
-    <h1>People</h1>
-    <ul>
-      <% names.forEach(name => { %>
-        <li><%= name %></li>
-      <% }); %>
-    </ul>
-  `;
-
-  const html = ejs.render(template, { names });
-  res.send(html);
+  res.render('index', { names });
 });
 ```
+
+In `views/index.ejs`:
+```html
+<ul>
+  <% names.forEach(name => { %>
+    <li><%= name %></li>
+  <% }); %>
+</ul>
+```
+
+- `app.set('view engine', 'ejs')` tells Express to use EJS for rendering.
+- `res.render('index', { names })` looks for a file named `index.ejs` in the `views/` folder and passes it the `names` data.
 
 ## Try it
 
 `GET /names`
 
-You should see a heading and a bulleted list of names. If you view the "Try" output, you'll see it is now HTML, not JSON.
+You should see a bulleted list of names. If you view the "Try" output, you'll see it is HTML.
 
 # Starter
 
 ```js
 const express = require('express');
-const ejs = require('ejs');
 const app = express();
+
+app.set('view engine', 'ejs');
 
 app.get('/names', (req, res) => {
   const names = ['Ada', 'Grace', 'Linus', 'Maya'];
-
-  // TODO: Use ejs.render to generate a <ul> list of these names
+  // TODO: Render the 'index' view and pass it the names array
 });
 
 module.exports = app;
+```
+
+# EJS Starter
+
+```html
+<!-- TODO: Use a forEach loop to show each name in a <li> tag -->
+<ul>
+</ul>
 ```
 
 # Solution
 
 ```js
 const express = require('express');
-const ejs = require('ejs');
 const app = express();
+
+app.set('view engine', 'ejs');
 
 app.get('/names', (req, res) => {
   const names = ['Ada', 'Grace', 'Linus', 'Maya'];
-  
-  const template = `
-    <ul>
-      <% names.forEach(name => { %>
-        <li><%= name %></li>
-      <% }); %>
-    </ul>
-  `;
-
-  const html = ejs.render(template, { names });
-  res.send(html);
+  res.render('index', { names });
 });
 
 module.exports = app;
+```
+
+# EJS Solution
+
+```html
+<ul>
+  <% names.forEach(name => { %>
+    <li><%= name %></li>
+  <% }); %>
+</ul>
 ```
 
 # Tests
@@ -119,4 +133,11 @@ describe('GET /names', () => {
 
 # Walkthrough
 
-`ejs.render(templateString, dataObject)` takes your template and a "context" object. Inside the template, the properties of the context object (like `names`) become available as variables. We use `<% names.forEach(...) %>` to start a loop and `<%= name %>` to insert each name into a `<li>` tag. Finally, `res.send(html)` sends the finished string to the browser.
+By setting `app.set('view engine', 'ejs')`, you tell Express that when you call `res.render('index')`, it should look for a file named `index.ejs` in a `views` folder.
+
+In this lesson, you have two files:
+1. `app.js`: Your Express server logic.
+2. `views/index.ejs`: Your HTML template.
+
+The `res.render` function takes the name of the view and an object containing the data you want to pass to that view. Inside the template, the keys of that object (like `names`) become variables you can use. We use `<% names.forEach(...) %>` for the loop and `<%= name %>` to output the value.
+

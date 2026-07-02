@@ -4,7 +4,7 @@ import { api } from './api.js';
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const HAS_BODY = new Set(['POST', 'PUT', 'PATCH']);
 
-export default function TryConsole({ questionId, getCode }) {
+export default function TryConsole({ questionId, getCode, getEjsCode }) {
   const [method, setMethod] = useState('GET');
   const [path, setPath] = useState('/');
   const [body, setBody] = useState('');
@@ -22,7 +22,7 @@ export default function TryConsole({ questionId, getCode }) {
       if (HAS_BODY.has(method) && body.trim()) {
         spec.body = tryParseJson(body);
       }
-      const res = await api.request(questionId, getCode(), spec);
+      const res = await api.request(questionId, getCode(), getEjsCode(), spec);
       setResponse(res);
     } catch (err) {
       setResponse({ error: err.message });
